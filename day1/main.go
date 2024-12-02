@@ -1,59 +1,50 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"sort"
+
+	"github.com/jacobkuzmits/advent24/utils"
 )
 
-func StreamFile(filePath string, callback func(string)) {
-	f, err := os.OpenFile(filePath, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		log.Fatalf("open file error: %v", err)
-		return
-	}
-	defer f.Close()
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		callback(sc.Text())
-	}
-	if err := sc.Err(); err != nil {
-		log.Fatalf("scan file error: %v", err)
-		return
-	}
-}
-
-func partOne() {
+func partOne(filePath string) {
+	// initialize two slices to hold the values from the file
 	left := []int{}
 	right := []int{}
-	StreamFile("input.txt", func(line string) {
-		var val1, val2 int
-		_, err := fmt.Sscanf(line, "%d   %d", &val1, &val2)
+
+	// stream the file and parse the values into the slices
+	utils.StreamFile(filePath, func(line string) {
+		var leftVal, rightVal int
+		_, err := fmt.Sscanf(line, "%d   %d", &leftVal, &rightVal)
 		if err != nil {
 			log.Fatal("error reading line: ", err)
 		}
-		left = append(left, val1)
-		right = append(right, val2)
+		left = append(left, leftVal)
+		right = append(right, rightVal)
 	})
 
+	// sort the slices for easy comparison
 	sort.Ints(left)
 	sort.Ints(right)
+
+	// solve the problem!
 	distance := 0
 	for i, leftVal := range left {
 		rightVal := right[i]
-		distance += int(math.Abs(float64(leftVal) - float64(rightVal)))
+		distance += int(math.Abs(float64(leftVal - rightVal)))
 	}
-	fmt.Println("Part 1 answer: ", distance)
+	fmt.Println(distance)
 }
 
-func partTwo() {
+func partTwo(filePath string) {
+	// initialize two slices to hold the values from the file
 	left := []int{}
 	right := []int{}
-	StreamFile("input.txt", func(line string) {
+
+	// stream the file and parse the values into the slices
+	utils.StreamFile(filePath, func(line string) {
 		var val1, val2 int
 		_, err := fmt.Sscanf(line, "%d   %d", &val1, &val2)
 		if err != nil {
@@ -63,27 +54,35 @@ func partTwo() {
 		right = append(right, val2)
 	})
 
-	occurences := make(map[int]int)
+	// create a map to hold the frequencies of each value in the right slice
+	frequencies := make(map[int]int)
 
+	// count the frequencies of each value in the right slice
 	for _, val := range right {
-		occurences[val] += 1
+		frequencies[val] += 1
 	}
 
-	similarity := 0
-
+	// solve the problem!
+	similarityScore := 0
 	for _, val := range left {
-		occ, exists := occurences[val]
-		if exists != true {
-			continue
+		if freq, exists := frequencies[val]; exists {
+			similarityScore += freq * val
 		}
-		similarity += occ * val
 	}
 
-	fmt.Println("Part 2 answer: ", similarity)
-
+	fmt.Println(similarityScore)
 }
 
 func main() {
-	partOne()
-	partTwo()
+	fmt.Println("\nPart 1 Test Solution")
+	partOne("testInput.txt")
+
+	fmt.Println("\nPart 1 Actual Solution")
+	partOne("input.txt")
+
+	fmt.Println("\nPart 2 Test Solution")
+	partTwo("testInput.txt")
+
+	fmt.Println("\nPart 2 Actual Solution")
+	partTwo("input.txt")
 }
