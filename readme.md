@@ -15,7 +15,7 @@ This repository contains my solutions for [Advent of Code 2024](https://adventof
 Copy the template directory to create a new day. Replace N with the day number (1-25):
 
 ```
-cp -r template/ dayN/
+cp -r ./template/ ./dayN/
 ```
 
 ### Running Solutions
