@@ -13,6 +13,7 @@ type mapNode struct {
 	isEdge         bool
 	guardPresent   bool
 	guardDirection direction
+	visitedFrom    map[direction]bool
 }
 
 type direction int
@@ -68,14 +69,15 @@ func parseMap(rows []string) (lm labMap) {
 				guardDirection = NONE
 			}
 
-			node := mapNode{
+			node := &mapNode{
 				isObstacle:     isObstacle,
 				beenVisited:    beenVisited,
 				isEdge:         isEdge,
 				guardPresent:   guardPresent,
 				guardDirection: guardDirection,
+				visitedFrom:    make(map[direction]bool),
 			}
-			rowNodes = append(rowNodes, &node)
+			rowNodes = append(rowNodes, node)
 		}
 		lm = append(lm, rowNodes)
 	}
@@ -120,6 +122,21 @@ func countVisitedNodes(lm labMap) (r int) {
 	return r
 }
 
+func getVisitedNodes(lm labMap) (nodes []coord) {
+	for rowIndex, row := range lm {
+		for colIndex, col := range row {
+			if col.beenVisited {
+				visitedCoord := coord{
+					x: colIndex,
+					y: rowIndex,
+				}
+				nodes = append(nodes, visitedCoord)
+			}
+		}
+	}
+	return nodes
+}
+
 func findGuard(lm labMap) (node *mapNode, pos coord) {
 	for rowIndex, row := range lm {
 		for colIndex, col := range row {
@@ -137,6 +154,7 @@ func findGuard(lm labMap) (node *mapNode, pos coord) {
 
 func walkGuard(guardPos *coord, startNode *mapNode, lm *labMap, offOfMap *bool) (*mapNode, bool) {
 	startNode.beenVisited = true
+	startNode.visitedFrom[startNode.guardDirection] = true
 
 	// check if guard is about to walk off of the edge
 	if startNode.isEdge {
@@ -185,37 +203,52 @@ func partOne(filePath string) {
 	if err != nil {
 		log.Fatalf("utils.GetLines() error: %v", err)
 	}
-	// get the map
+
 	labMap := parseMap(lines)
-	// display the map
-	// showMap(&labMap)
 
 	guardNode, guardPos := findGuard(labMap)
-	// fmt.Printf("Guard is at: %v\n", guardPos)
-	// fmt.Printf("Guard node: %v\n", guardNode)
-	// fmt.Printf("Guard is facing %s\n", guardNode.guardDirection)
 
 	offOfMap := false
 	startNode := guardNode
 	for !offOfMap {
 		startNode, offOfMap = walkGuard(&guardPos, startNode, &labMap, &offOfMap)
 	}
-	// showMap(&labMap)
-	visitedNodes := countVisitedNodes(labMap)
-	fmt.Printf("Visited %d nodes\n", visitedNodes)
+	visitedNodeCount := countVisitedNodes(labMap)
+	fmt.Printf("Visited %d nodes\n", visitedNodeCount)
 }
 
 func partTwo(filePath string) {
-	// get lines as a slice of strings
 	lines, err := utils.GetLines(filePath)
 	if err != nil {
 		log.Fatalf("utils.GetLines() error: %v", err)
 	}
-	fmt.Println(lines[0])
+	labMap := parseMap(lines)
 
-	utils.StreamFile(filePath, func(line string) {
-		// do something with each line
-	})
+	guardNode, guardPos := findGuard(labMap)
+
+	offOfMap := false
+	startNode := guardNode
+	for !offOfMap {
+		startNode, offOfMap = walkGuard(&guardPos, startNode, &labMap, &offOfMap)
+	}
+	visitedNodes := getVisitedNodes(labMap)
+	loopPositions := 0
+	for _, coord := range visitedNodes {
+		newMap := parseMap(lines)
+		newGuardNode, newGuardPos := findGuard(newMap)
+		newMap[coord.y][coord.x].isObstacle = true
+		offOfGrid := false
+		startingNode := newGuardNode
+		for !offOfGrid {
+			if startingNode.visitedFrom[startingNode.guardDirection] {
+				loopPositions += 1
+				offOfGrid = true
+				continue
+			}
+			startingNode, offOfGrid = walkGuard(&newGuardPos, startingNode, &newMap, &offOfGrid)
+		}
+	}
+	fmt.Printf("%d possible loops\n", loopPositions)
 }
 
 func main() {
@@ -225,9 +258,9 @@ func main() {
 	fmt.Println("\nPart 1 Actual Solution")
 	partOne("input.txt")
 
-	// fmt.Println("\nPart 2 Test Solution")
-	// partTwo("testInput.txt")
+	fmt.Println("\nPart 2 Test Solution")
+	partTwo("testInput.txt")
 
-	// fmt.Println("\nPart 2 Actual Solution")
-	// partTwo("input.txt")
+	fmt.Println("\nPart 2 Actual Solution")
+	partTwo("input.txt")
 }
