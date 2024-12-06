@@ -29,16 +29,23 @@ func (d direction) String() string {
 	return [...]string{"up", "right", "down", "left", "none"}[d]
 }
 
-type labMap [][]mapNode
+type labMap [][]*mapNode
 
 type coord struct {
 	x int
 	y int
 }
 
+var walkVectors = map[string]coord{
+	"up":    coord{x: 0, y: -1},
+	"right": coord{x: 1, y: 0},
+	"down":  coord{x: 0, y: 1},
+	"left":  coord{x: -1, y: 0},
+}
+
 func parseMap(rows []string) (lm labMap) {
 	for rowIndex, row := range rows {
-		rowNodes := []mapNode{}
+		rowNodes := []*mapNode{}
 		for colIndex, col := range row {
 			isObstacle := string(col) == "#"
 			beenVisited := false
@@ -68,15 +75,15 @@ func parseMap(rows []string) (lm labMap) {
 				guardPresent:   guardPresent,
 				guardDirection: guardDirection,
 			}
-			rowNodes = append(rowNodes, node)
+			rowNodes = append(rowNodes, &node)
 		}
 		lm = append(lm, rowNodes)
 	}
 	return lm
 }
 
-func showMap(lm labMap) {
-	for _, row := range lm {
+func showMap(lm *labMap) {
+	for _, row := range *lm {
 		rowString := ""
 		for _, col := range row {
 			if col.isObstacle {
@@ -102,15 +109,100 @@ func showMap(lm labMap) {
 	}
 }
 
-// func findGuard()
+func countVisitedNodes(lm labMap) (r int) {
+	for _, row := range lm {
+		for _, col := range row {
+			if col.beenVisited {
+				r += 1
+			}
+		}
+	}
+	return r
+}
+
+func findGuard(lm labMap) (node *mapNode, pos coord) {
+	for rowIndex, row := range lm {
+		for colIndex, col := range row {
+			if col.guardPresent {
+				node = col
+				pos = coord{
+					x: colIndex,
+					y: rowIndex,
+				}
+			}
+		}
+	}
+	return node, pos
+}
+
+func walkGuard(guardPos *coord, startNode *mapNode, lm *labMap, offOfMap *bool) (*mapNode, bool) {
+	startNode.beenVisited = true
+
+	// check if guard is about to walk off of the edge
+	if startNode.isEdge {
+		*offOfMap = true
+		return startNode, true
+	}
+
+	// get vector to move based on guard's direction
+	vector := walkVectors[startNode.guardDirection.String()]
+	targetCoord := coord{
+		x: guardPos.x + vector.x,
+		y: guardPos.y + vector.y,
+	}
+
+	// check if target position is off the map
+	if targetCoord.y < 0 || targetCoord.y >= len(*lm) || targetCoord.x < 0 || targetCoord.x >= len((*lm)[0]) {
+		*offOfMap = true
+		return startNode, true
+	}
+
+	// get the target node
+	targetNode := (*lm)[targetCoord.y][targetCoord.x]
+
+	// obstacle in the way, turn 90 degrees right
+	if targetNode.isObstacle {
+		startNode.guardDirection = (startNode.guardDirection + 1) % 4
+		return startNode, false
+	}
+
+	// no obstacle, walk forwards
+	if !targetNode.isObstacle {
+		// move the guard position
+		guardPos.x = targetCoord.x
+		guardPos.y = targetCoord.y
+		startNode.guardPresent = false
+		targetNode.guardPresent = true
+		targetNode.guardDirection = startNode.guardDirection
+		startNode.guardDirection = NONE
+	}
+
+	return targetNode, false
+}
 
 func partOne(filePath string) {
 	lines, err := utils.GetLines(filePath)
 	if err != nil {
 		log.Fatalf("utils.GetLines() error: %v", err)
 	}
+	// get the map
 	labMap := parseMap(lines)
-	showMap(labMap)
+	// display the map
+	// showMap(&labMap)
+
+	guardNode, guardPos := findGuard(labMap)
+	// fmt.Printf("Guard is at: %v\n", guardPos)
+	// fmt.Printf("Guard node: %v\n", guardNode)
+	// fmt.Printf("Guard is facing %s\n", guardNode.guardDirection)
+
+	offOfMap := false
+	startNode := guardNode
+	for !offOfMap {
+		startNode, offOfMap = walkGuard(&guardPos, startNode, &labMap, &offOfMap)
+	}
+	// showMap(&labMap)
+	visitedNodes := countVisitedNodes(labMap)
+	fmt.Printf("Visited %d nodes\n", visitedNodes)
 }
 
 func partTwo(filePath string) {
@@ -130,8 +222,8 @@ func main() {
 	fmt.Println("\nPart 1 Test Solution")
 	partOne("testInput.txt")
 
-	// fmt.Println("\nPart 1 Actual Solution")
-	// partOne("input.txt")
+	fmt.Println("\nPart 1 Actual Solution")
+	partOne("input.txt")
 
 	// fmt.Println("\nPart 2 Test Solution")
 	// partTwo("testInput.txt")
