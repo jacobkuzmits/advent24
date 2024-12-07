@@ -8,90 +8,51 @@ import (
 	"github.com/jacobkuzmits/advent24/utils"
 )
 
-func recursiveSearch(nums []string, target int, currentIndex int, currentResult int) bool {
-	// base case
-	if currentIndex >= len(nums) {
-		return currentResult == target
+func search(nums []string, target int, curIndex int, curResult int, isPart2 bool) bool {
+	if curIndex >= len(nums) {
+		return curResult == target
 	}
-	currentNum, _ := strconv.Atoi(nums[currentIndex])
+	currentNum, _ := strconv.Atoi(nums[curIndex])
 
-	// addition
-	if recursiveSearch(nums, target, currentIndex+1, currentResult+currentNum) {
+	if search(nums, target, curIndex+1, curResult+currentNum, isPart2) {
 		return true
 	}
 
-	// multiplication
-	if recursiveSearch(nums, target, currentIndex+1, currentResult*currentNum) {
+	if search(nums, target, curIndex+1, curResult*currentNum, isPart2) {
 		return true
+	}
+
+	if isPart2 {
+		concatResult, _ := strconv.Atoi(strconv.Itoa(curResult) + strconv.Itoa(currentNum))
+		if search(nums, target, curIndex+1, concatResult, isPart2) {
+			return true
+		}
 	}
 
 	return false
 }
 
-func recursiveSearchWithConcat(nums []string, target int, currentIndex int, currentResult int) bool {
-	// base case
-	if currentIndex >= len(nums) {
-		return currentResult == target
-	}
-	currentNum, _ := strconv.Atoi(nums[currentIndex])
-
-	// addition
-	if recursiveSearchWithConcat(nums, target, currentIndex+1, currentResult+currentNum) {
-		return true
-	}
-
-	// multiplication
-	if recursiveSearchWithConcat(nums, target, currentIndex+1, currentResult*currentNum) {
-		return true
-	}
-
-	// concatenation
-	concatResult, _ := strconv.Atoi(strconv.Itoa(currentResult) + strconv.Itoa(currentNum))
-	if recursiveSearchWithConcat(nums, target, currentIndex+1, concatResult) {
-		return true
-	}
-
-	return false
-}
-
-func partOne(filePath string) {
-	total := 0
+func solve(filePath string) (part1Total, part2Total int) {
 	utils.StreamFile(filePath, func(line string) {
 		splitString := strings.Split(line, ":")
 		expected, _ := strconv.Atoi(splitString[0])
 		nums := strings.Split(strings.TrimLeft(splitString[1], " "), " ")
 		firstNum, _ := strconv.Atoi(nums[0])
-		if recursiveSearch(nums, expected, 1, firstNum) {
-			total += expected
+		if search(nums, expected, 1, firstNum, false) {
+			part1Total += expected
+		}
+		if search(nums, expected, 1, firstNum, true) {
+			part2Total += expected
 		}
 	})
-	fmt.Println(total)
-}
-
-func partTwo(filePath string) {
-	total := 0
-	utils.StreamFile(filePath, func(line string) {
-		splitString := strings.Split(line, ":")
-		expected, _ := strconv.Atoi(splitString[0])
-		nums := strings.Split(strings.TrimLeft(splitString[1], " "), " ")
-		firstNum, _ := strconv.Atoi(nums[0])
-		if recursiveSearchWithConcat(nums, expected, 1, firstNum) {
-			total += expected
-		}
-	})
-	fmt.Println(total)
+	return part1Total, part2Total
 }
 
 func main() {
-	fmt.Println("\nPart 1 Test Solution")
-	partOne("testInput.txt")
-
-	fmt.Println("\nPart 1 Actual Solution")
-	partOne("input.txt")
-
-	fmt.Println("\nPart 2 Test Solution")
-	partTwo("testInput.txt")
-
-	fmt.Println("\nPart 2 Actual Solution")
-	partTwo("input.txt")
+	t1, t2 := solve("testInput.txt")
+	p1, p2 := solve("input.txt")
+	fmt.Printf("Part 1 Test Solution: %d\n", t1)
+	fmt.Printf("Part 1 Actual Solution: %d\n", p1)
+	fmt.Printf("Part 2 Test Solution: %d\n", t2)
+	fmt.Printf("Part 2 Actual Solution: %d\n", p2)
 }
